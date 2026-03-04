@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interview Buddy | Dashboard</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- Firebase COMPAT SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #141e30, #243b55);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            max-width: 800px;
+            margin: auto;
+            padding: 30px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .logout-btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            background: #ff5252;
+            color: #fff;
+            cursor: pointer;
+            font-weight: 500;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .profile-card {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 18px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .profile-card img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .profile-info h2 {
+            margin: 0;
+        }
+
+        .profile-info p {
+            margin: 4px 0;
+            font-size: 14px;
+            color: #ddd;
+        }
+
+        .action-btn {
+            margin-top: 20px;
+            background: #00e5ff;
+            color: #000;
+            padding: 18px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform .1s;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .history {
+            margin-top: 50px;
+        }
+
+        .history-card {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard">
+
+        <div class="header">
+            <h1>Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="profile-card" data-aos="fade-up">
+            <img id="userPhoto" src="" alt="User Photo">
+            <div class="profile-info">
+                <h2 id="userName">Loading...</h2>
+                <p id="userEmail"></p>
+            </div>
+        </div>
+
+        <div class="action-btn" data-aos="fade-up" onclick="window.location.href='interview.html'">
+            Start AI Interview
+        </div>
+
+        <div class="history" data-aos="fade-up">
+            <h3>Interview History</h3>
+            <div id="historyList">
+                <div class="history-card">Loading...</div>
+            </div>
+        </div>
+
+        <div class="action-btn" onclick="window.location.href='analytics.html'">
+            View Performance Analytics
+        </div>
+
+    </div>
+
+    <!-- AOS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>AOS.init({ duration: 1000, once: true });</script>
+
+    <script>
+        // 🔹 Firebase config
+        firebase.initializeApp({
+            apiKey: "AIzaSyDU1Y-_FaLdZw-3vPBcJhzaGCt4d3DRdcU",
+            authDomain: "interviewbuddy-3a3d0.firebaseapp.com",
+            projectId: "interviewbuddy-3a3d0"
+        });
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // 🔐 Auth + Profile check
+        auth.onAuthStateChanged(async user => {
+            if (!user) {
+                window.location.href = "index.html";
+                return;
+            }
+
+            const doc = await db.collection("users").doc(user.uid).get();
+
+            if (!doc.exists || !doc.data().profileCompleted) {
+                window.location.href = "profile.html";
+                return;
+            }
+
+            const data = doc.data();
+
+            document.getElementById("userName").innerText = data.name;
+            document.getElementById("userEmail").innerText = data.email;
+            document.getElementById("userPhoto").src =
+                user.photoURL || "https://i.pravatar.cc/150";
+
+            // 📜 Interview history
+            db.collection("interviews")
+                .where("uid", "==", user.uid)
+                .orderBy("createdAt", "desc")
+                .limit(3)
+                .onSnapshot(snapshot => {
+                    historyList.innerHTML = "";
+
+                    if (snapshot.empty) {
+                        historyList.innerHTML =
+                            "<div class='history-card'>No interviews yet</div>";
+                        return;
+                    }
+
+                    snapshot.forEach(doc => {
+                        const i = doc.data();
+                        historyList.innerHTML += `
+                            <div class="history-card">
+                                <b>Score:</b> ${i.score}/10<br>
+                                <small>${i.question}</small>
+                            </div>`;
+                    });
+                });
+        });
+
+        function logout() {
+            auth.signOut().then(() => {
+                window.location.href = "index.html";
+            });
+        }
+    </script>
+
+</body>
+
+</html>

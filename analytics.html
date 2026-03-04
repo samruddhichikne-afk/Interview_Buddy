@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interview Buddy | Analytics</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #232526, #414345);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .card h2 {
+            font-size: 36px;
+            margin: 10px 0;
+            color: #00e5ff;
+        }
+
+        .topics {
+            margin-top: 40px;
+        }
+
+        .topic {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 12px 18px;
+            background: #00e5ff;
+            color: #000;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Interview Performance Analytics</h1>
+
+        <div class="stats">
+            <div class="card">
+                <p>Total Interviews</p>
+                <h2 id="total">0</h2>
+            </div>
+
+            <div class="card">
+                <p>Average Score</p>
+                <h2 id="average">0</h2>
+            </div>
+
+            <div class="card">
+                <p>Best Score</p>
+                <h2 id="best">0</h2>
+            </div>
+        </div>
+
+        <div class="topics">
+            <h3>Weak Areas (Topics)</h3>
+            <div id="topicsList"></div>
+        </div>
+
+        <a href="dashboard.html">⬅ Back to Dashboard</a>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDU1Y-_FaLdZw-3vPBcJhzaGCt4d3DRdcU",
+            authDomain: "interviewbuddy-3a3d0.firebaseapp.com",
+            projectId: "interviewbuddy-3a3d0",
+            storageBucket: "interviewbuddy-3a3d0.appspot.com",
+            messagingSenderId: "383421331038",
+            appId: "1:383421331038:web:6cf14d106cb2b10c1366cf"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        const totalEl = document.getElementById("total");
+        const avgEl = document.getElementById("average");
+        const bestEl = document.getElementById("best");
+        const topicsList = document.getElementById("topicsList");
+
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = "index.html";
+                return;
+            }
+
+            db.collection("interviews")
+                .where("uid", "==", user.uid)
+                .get()
+                .then(snapshot => {
+                    let total = snapshot.size;
+                    let sum = 0;
+                    let best = 0;
+                    let topicCount = {};
+
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        sum += data.score;
+                        best = Math.max(best, data.score);
+
+                        const topic = data.question;
+                        if (!topicCount[topic]) topicCount[topic] = [];
+                        topicCount[topic].push(data.score);
+                    });
+
+                    totalEl.innerText = total;
+                    avgEl.innerText = total ? (sum / total).toFixed(1) : 0;
+                    bestEl.innerText = best;
+
+                    // Weak topics (avg score < 6)
+                    for (let topic in topicCount) {
+                        const avg =
+                            topicCount[topic].reduce((a, b) => a + b, 0) / topicCount[topic].length;
+
+                        if (avg < 6) {
+                            topicsList.innerHTML += `
+              <div class="topic">
+                <strong>${topic}</strong><br>
+                Avg Score: ${avg.toFixed(1)}
+              </div>
+            `;
+                        }
+                    }
+
+                    if (!topicsList.innerHTML) {
+                        topicsList.innerHTML = "<p>No weak areas 🎉</p>";
+                    }
+                });
+        });
+    </script>
+
+</body>
+
+</html>
