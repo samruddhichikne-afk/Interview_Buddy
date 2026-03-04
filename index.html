@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interview Buddy | Login</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <!-- ✅ Firebase COMPAT SDKs (ALL REQUIRED) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+
+<style>
+    /* ========== GLOBAL STYLES ========== */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+        height: 100vh;
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    /* ========== LOGIN CONTAINER ========== */
+    .login-container {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(12px);
+        border-radius: 20px;
+        padding: 50px 40px;
+        width: 380px;
+        text-align: center;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        animation: floatCard 6s ease-in-out infinite;
+    }
+
+    @keyframes floatCard {
+        0% {
+            transform: translateY(0px);
+        }
+
+        50% {
+            transform: translateY(-12px);
+        }
+
+        100% {
+            transform: translateY(0px);
+        }
+    }
+
+    /* ========== LOGO & TEXT ========== */
+    .app-logo {
+        font-size: 32px;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 10px;
+    }
+
+    .app-tagline {
+        font-size: 14px;
+        color: #d0d0d0;
+        margin-bottom: 35px;
+    }
+
+    /* ========== GOOGLE BUTTON ========== */
+    .google-login-btn {
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #444;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: all 0.3s ease;
+    }
+
+    .google-login-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(255, 255, 255, 0.25);
+    }
+
+    .google-login-btn img {
+        width: 20px;
+    }
+
+    /* ========== FOOTER TEXT ========== */
+    .footer-text {
+        margin-top: 30px;
+        font-size: 12px;
+        color: #bdbdbd;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 420px) {
+        .login-container {
+            width: 90%;
+            padding: 40px 25px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+    <!-- LOGIN CARD -->
+    <div class="login-container" data-aos="zoom-in">
+        <div class="app-logo">Interview Buddy</div>
+        <div class="app-tagline">Your AI Interview Partner</div>
+
+        <button class="google-login-btn" id="googleLoginBtn">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png" alt="Google Logo">
+            Sign in with Google
+        </button>
+
+        <div class="footer-text">Practice • Improve • Succeed</div>
+    </div>
+
+    <!-- AOS SCRIPT -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({ duration: 1200, once: true });
+    </script>
+
+    <!-- FIREBASE AUTH SCRIPT -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDU1Y-_FaLdZw-3vPBcJhzaGCt4d3DRdcU",
+            authDomain: "interviewbuddy-3a3d0.firebaseapp.com",
+            projectId: "interviewbuddy-3a3d0",
+            storageBucket: "interviewbuddy-3a3d0.appspot.com",
+            messagingSenderId: "383421331038",
+            appId: "1:383421331038:web:6cf14d106cb2b10c1366cf"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        document
+            .getElementById("googleLoginBtn")
+            .addEventListener("click", () => {
+
+                const provider = new firebase.auth.GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: "select_account" });
+
+                auth.signInWithPopup(provider)
+                    .then(async (result) => {
+                        const user = result.user;
+
+                        console.log("Logged in:", user.email);
+
+                        const snap = await db.collection("users").doc(user.uid).get();
+
+                        if (!snap.exists || !snap.data().profileCompleted) {
+                            window.location.href = "profile.html";
+                        } else {
+                            window.location.href = "dashboard.html";
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("LOGIN ERROR:", error);
+                        alert(error.message);
+                    });
+            });
+        // Safety check
+        console.assert(typeof firebase !== "undefined", "Firebase SDK not loaded");
+    </script>
+
+</body>
+
+</html>
