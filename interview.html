@@ -2,20 +2,11 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Interview Buddy | AI Interview</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mock Interview</title>
 
-    <!-- Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-    <!-- Face API -->
-    <script defer src="https://unpkg.com/face-api.js"></script>
 
     <style>
         body {
@@ -23,97 +14,38 @@
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
             color: #fff;
-            min-height: 100vh;
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1000px;
             margin: auto;
             padding: 30px;
         }
 
-        h1 {
-            text-align: center;
-        }
-
-        .interview-box {
+        .box {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-top: 30px;
-        }
-
-        .video-box {
-            position: relative;
+            gap: 20px;
         }
 
         video {
             width: 100%;
-            border-radius: 16px;
-            border: 3px solid #00e5ff;
-            background: #000;
+            border-radius: 15px;
+            border: 2px solid white;
         }
 
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        .question-box {
+        .panel {
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 25px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            padding: 20px;
+            border-radius: 15px;
         }
 
-        .question {
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-
-        .transcript {
-            font-size: 14px;
-            background: rgba(0, 0, 0, 0.35);
-            padding: 12px;
-            border-radius: 10px;
-            min-height: 90px;
-            margin-bottom: 15px;
-        }
-
-        .controls button {
-            padding: 12px 18px;
+        button {
+            padding: 10px;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: 600;
-            margin-right: 10px;
-        }
-
-        .start {
-            background: #00e5ff;
-        }
-
-        .stop {
-            background: #ff5252;
-            color: #fff;
-        }
-
-        .feedback {
-            margin-top: 20px;
-            background: rgba(255, 255, 255, 0.15);
-            padding: 15px;
-            border-radius: 12px;
-            display: none;
-            white-space: pre-line;
-        }
-
-        @media (max-width: 768px) {
-            .interview-box {
-                grid-template-columns: 1fr;
-            }
+            font-weight: bold;
         }
     </style>
 </head>
@@ -123,167 +55,192 @@
     <div class="container">
         <h1>AI Mock Interview</h1>
 
-        <div class="interview-box">
-            <div class="video-box">
-                <video id="camera" autoplay muted playsinline></video>
-                <canvas id="overlay"></canvas>
-            </div>
+        <div class="box">
+            <video id="camera" autoplay muted playsinline></video>
 
-            <div class="question-box">
-                <div>
-                    <div class="question" id="questionText">Click Start to begin interview</div>
-                    <div class="transcript" id="transcriptText">Your answer will appear here...</div>
-                </div>
+            <div class="panel">
+                <div id="questionText">Click Start to begin</div>
+                <div id="transcriptText">Your answer will appear here...</div>
 
-                <div class="controls">
-                    <button class="start" onclick="startInterview()">Start Interview</button>
-                    <button class="stop" onclick="endInterview()">End Interview</button>
-                </div>
+                <button onclick="startInterview()">Start</button>
+                <button onclick="stopInterview()" style="background:red;color:white;">Stop</button>
 
-                <div class="feedback" id="feedbackBox"></div>
+                <div id="feedbackBox" style="margin-top:15px;display:none;"></div>
             </div>
         </div>
     </div>
 
     <script>
-        /* ========== FIREBASE ========== */
-        firebase.initializeApp({
-            apiKey: "AIzaSyDU1Y-_FaLdZw-3vPBcJhzaGCt4d3DRdcU",
-            authDomain: "interviewbuddy-3a3d0.firebaseapp.com",
-            projectId: "interviewbuddy-3a3d0"
-        });
 
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        /* ================= QUESTIONS ================= */
 
-        /* ========== QUESTIONS ========== */
-        const QUESTION_BANK = {
-            java: ["Explain OOP concepts", "What is JVM?"],
-            sql: ["What is normalization?", "Primary vs Foreign key"],
-            html: ["What is HTML5?", "Semantic tags"],
-            hr: ["Tell me about yourself", "Why should we hire you?"]
+        const QUESTION_TOPICS = {
+            "Tell me about yourself": "HR",
+            "What are your strengths?": "HR",
+            "Why should we hire you?": "HR",
+            "Explain OOP concepts": "OOP",
+            "Difference between abstract class and interface": "OOP",
+            "What is JVM?": "Java",
+            "What is SQL?": "SQL",
+            "Explain normalization": "SQL",
+            "What is HTML5?": "Web"
         };
 
-        let questions = [];
-        let currentQuestion = "";
+        const QUESTION_BANK = Object.keys(QUESTION_TOPICS);
+
+        /* ================= VARIABLES ================= */
+
+        let selectedQuestions = [];
+        let currentIndex = 0;
+        let answers = [];
         let transcript = "";
-
-        /* ========== CAMERA + FACE AI ========== */
-        const video = document.getElementById("camera");
-        const canvas = document.getElementById("overlay");
-        const ctx = canvas.getContext("2d");
-
+        let currentQuestion = "";
+        let isRunning = false;
         let stream = null;
-        let faceInterval = null;
 
-        async function loadFaceModels() {
-            await faceapi.nets.tinyFaceDetector.loadFromUri(
-                "https://unpkg.com/face-api.js/models"
-            );
-        }
+        /* ================= CAMERA + MIC ================= */
 
-        async function startCamera() {
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true
-            });
-            video.srcObject = stream;
+        const video = document.getElementById("camera");
 
-            video.onloadedmetadata = () => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-            };
-
-            faceInterval = setInterval(detectFace, 800);
-        }
-
-        async function detectFace() {
-            const detections = await faceapi.detectAllFaces(
-                video,
-                new faceapi.TinyFaceDetectorOptions()
-            );
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if (detections.length === 0) {
-                ctx.fillStyle = "red";
-                ctx.font = "18px Poppins";
-                ctx.fillText("⚠ Face Not Detected", 10, 30);
-            } else {
-                faceapi.draw.drawDetections(canvas, detections);
+        async function startMedia() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                alert("Camera/Mic permission denied");
+                console.error(err);
             }
         }
 
-        function stopCamera() {
+        function stopMedia() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
-                stream = null;
             }
-            clearInterval(faceInterval);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
-        /* ========== SPEECH ========== */
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.lang = "en-IN";
+        /* ================= SPEECH ================= */
 
-        recognition.onresult = (e) => {
-            transcript = "";
-            for (let i = 0; i < e.results.length; i++) {
-                transcript += e.results[i][0].transcript;
-            }
-            transcriptText.innerText = transcript;
-        };
+        let recognition;
 
-        /* ========== INTERVIEW FLOW ========== */
-        auth.onAuthStateChanged(async user => {
-            if (!user) {
-                window.location.href = "index.html";
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+
+            recognition.onresult = (e) => {
+                transcript = "";
+                for (let i = 0; i < e.results.length; i++) {
+                    transcript += e.results[i][0].transcript;
+                }
+                document.getElementById("transcriptText").innerText = transcript;
+            };
+
+            recognition.onend = () => {
+                if (!isRunning) return;
+
+                answers.push({ question: currentQuestion, answer: transcript });
+                currentIndex++;
+                askNextQuestion();
+            };
+
+        } else {
+            alert("Speech Recognition not supported. Use Chrome.");
+        }
+
+        /* ================= INTERVIEW ================= */
+
+        async function startInterview() {
+
+            if (QUESTION_BANK.length < 5) {
+                alert("Need at least 5 questions");
                 return;
             }
 
-            const profile = await db.collection("users").doc(user.uid).get();
-            profile.data().skills.forEach(skill => {
-                if (QUESTION_BANK[skill]) {
-                    questions.push(...QUESTION_BANK[skill]);
-                }
-            });
-            questions.push(...QUESTION_BANK.hr);
-        });
+            await startMedia();
 
-        async function startInterview() {
-            await loadFaceModels();
-            await startCamera();
+            selectedQuestions = [...QUESTION_BANK]
+                .sort(() => 0.5 - Math.random())
+                .slice(0, 5);
 
-            currentQuestion = questions[Math.floor(Math.random() * questions.length)];
-            questionText.innerText = currentQuestion;
-            transcriptText.innerText = "Listening...";
+            currentIndex = 0;
+            answers = [];
+            isRunning = true;
+
+            askNextQuestion();
+        }
+
+        function askNextQuestion() {
+
+            if (currentIndex >= selectedQuestions.length) {
+                finishInterview();
+                return;
+            }
+
+            currentQuestion = selectedQuestions[currentIndex];
+
+            document.getElementById("questionText").innerText =
+                `Q${currentIndex + 1}: ${currentQuestion}`;
+
             transcript = "";
+            document.getElementById("transcriptText").innerText = "Listening...";
 
             recognition.start();
+
+            setTimeout(() => {
+                recognition.stop();
+            }, 10000);
         }
 
-        async function endInterview() {
+        function stopInterview() {
+            isRunning = false;
             recognition.stop();
-            stopCamera();
+            stopMedia();
+        }
 
-            const score = Math.min(10, Math.floor(transcript.split(" ").length / 10));
-            feedbackBox.style.display = "block";
-            feedbackBox.innerText = `Score: ${score}/10\nGood attempt.\nImprove clarity.`;
+        /* ================= RESULT ================= */
 
-            const user = auth.currentUser;
-            if (user) {
-                await db.collection("interviews").add({
-                    uid: user.uid,
-                    question: currentQuestion,
-                    transcript,
-                    score,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+        function finishInterview() {
+
+            isRunning = false;
+            stopMedia();
+
+            let totalWords = 0;
+            let weakAreas = {};
+
+            answers.forEach(a => {
+                let words = a.answer.split(" ").length;
+                totalWords += words;
+
+                let topic = QUESTION_TOPICS[a.question];
+
+                if (words < 8) {
+                    if (!weakAreas[topic]) weakAreas[topic] = 0;
+                    weakAreas[topic]++;
+                }
+            });
+
+            let score = Math.min(10, Math.floor(totalWords / 30));
+
+            let feedback =
+                score >= 8 ? "Excellent" :
+                    score >= 5 ? "Good" :
+                        "Needs Improvement";
+
+            document.getElementById("feedbackBox").style.display = "block";
+            document.getElementById("feedbackBox").innerText =
+                `Score: ${score}/10\n${feedback}`;
+        }
+        if (recognition && isRunning) {
+            try {
+                recognition.start();
+            } catch (e) {
+                console.log("Recognition already started");
             }
         }
+
     </script>
 
 </body>
